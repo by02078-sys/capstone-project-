@@ -49,7 +49,7 @@ jobs:
         run: npx playwright install --with-deps
 
       - name: Run Playwright Tests
-        run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
+        run: npx playwright test --shard=${{ matrix.shard_index }}/3
         continue-on-error: true
 
       - name: Upload Allure Raw Results (Shard)
@@ -85,7 +85,6 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      # Downloads all shards directly into the correct workspace folder
       - name: Download Allure Raw Results
         uses: actions/download-artifact@v4
         with:
@@ -94,7 +93,7 @@ jobs:
           path: capday_1/allure-results
 
       - name: Generate Allure Report
-        run: npm run allure:generate
+        run: npx allure generate allure-results --clean -o allure-report
         continue-on-error: true
 
       - name: Upload Allure HTML Report Artifact
@@ -106,12 +105,11 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
-      # Fixed pathing: Removed the double 'capday_1' nesting issue caused by defaults.run
       - name: Deploy to GitHub Pages
         if: always() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./capday_1/allure-report
+          publish_dir: capday_1/allure-report
         continue-on-error: true
