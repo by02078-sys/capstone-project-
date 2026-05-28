@@ -3,7 +3,8 @@ name: Playwright Tests & Allure Report
 on:
   push:
     branches:
-      - "**"
+      - "main"
+      - "master"
   pull_request:
     branches: [main, master]
   workflow_dispatch:
@@ -34,14 +35,12 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 🔽 FIRST UPDATE IN THE TEST JOB 🔽
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: "capday_1/package-lock.json" # 💡 Fixed path string format
-      # 🔼 FIRST UPDATE IN THE TEST JOB 🔼
+          cache-dependency-path: "capday_1/package-lock.json"
 
       - name: Install Dependencies
         run: npm ci
@@ -76,18 +75,17 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # 🔽 SECOND UPDATE IN THE REPORT JOB 🔽
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: "capday_1/package-lock.json" # 💡 Fixed path string format
-      # 🔼 SECOND UPDATE IN THE REPORT JOB 🔼
+          cache-dependency-path: "capday_1/package-lock.json"
 
       - name: Install Dependencies
         run: npm ci
 
+      # Downloads all shards directly into the correct workspace folder
       - name: Download Allure Raw Results
         uses: actions/download-artifact@v4
         with:
@@ -95,14 +93,11 @@ jobs:
           merge-multiple: true
           path: capday_1/allure-results
 
-      - name: Ensure Allure Results Directory
-        run: mkdir -p allure-results
-
       - name: Generate Allure Report
         run: npm run allure:generate
         continue-on-error: true
 
-      - name: Upload Allure HTML Report
+      - name: Upload Allure HTML Report Artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -111,11 +106,12 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+      # Fixed pathing: Removed the double 'capday_1' nesting issue caused by defaults.run
       - name: Deploy to GitHub Pages
         if: always() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: capday_1/allure-report
+          publish_dir: ./capday_1/allure-report
         continue-on-error: true
