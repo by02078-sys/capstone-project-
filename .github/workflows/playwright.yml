@@ -4,28 +4,27 @@ on:
   push:
     branches:
       - "**"
-
   pull_request:
     branches: [main, master]
-
   workflow_dispatch:
 
 permissions:
   contents: write
-
   pages: write
-
   id-token: write
 
 jobs:
   test:
     timeout-minutes: 60
-
     runs-on: ubuntu-latest
+
+    # 💡 Forces the test job to execute entirely within your capday_1 subfolder
+    defaults:
+      run:
+        working-directory: ./capday_1
 
     strategy:
       fail-fast: false
-
       matrix:
         shard_index: [1, 2, 3]
 
@@ -34,121 +33,89 @@ jobs:
 
     steps:
       - name: Checkout Repository
-
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-
         uses: actions/setup-node@v4
-
         with:
           node-version: lts/*
-
           cache: npm
+          # 💡 Points directly to your subfolder lock file path
+          cache-dependency-path: "./capday_1/package-lock.json"
 
       - name: Install Dependencies
-
         run: npm ci
 
       - name: Install Playwright Browsers
-
         run: npx playwright install --with-deps
 
       - name: Run Playwright Tests
-
         run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
-
         continue-on-error: true
 
       - name: Upload Allure Raw Results (Shard)
-
         if: always()
-
         uses: actions/upload-artifact@v4
-
         with:
           name: allure-results-shard-${{ matrix.shard_index }}
-
-          path: allure-results
-
+          path: capday_1/allure-results
           if-no-files-found: warn
-
           retention-days: 14
 
   report:
     if: ${{ always() }}
-
     needs: [test]
-
     timeout-minutes: 30
-
     runs-on: ubuntu-latest
+
+    # 💡 Forces the report job to execute entirely within your capday_1 subfolder
+    defaults:
+      run:
+        working-directory: ./capday_1
 
     steps:
       - name: Checkout Repository
-
         uses: actions/checkout@v4
 
       - name: Setup Node.js
-
         uses: actions/setup-node@v4
-
         with:
           node-version: lts/*
-
           cache: npm
+          # 💡 Fixes the missing link for the report job setup phase!
+          cache-dependency-path: "./capday_1/package-lock.json"
 
       - name: Install Dependencies
-
         run: npm ci
 
       - name: Download Allure Raw Results
-
         uses: actions/download-artifact@v4
-
         with:
           pattern: allure-results-shard-*
-
           merge-multiple: true
-
-          path: allure-results
+          path: capday_1/allure-results
 
       - name: Ensure Allure Results Directory
-
         run: mkdir -p allure-results
 
       - name: Generate Allure Report
-
         run: npm run allure:generate
-
         continue-on-error: true
 
       - name: Upload Allure HTML Report
-
         if: always()
-
         uses: actions/upload-artifact@v4
-
         with:
           name: allure-report
-
-          path: allure-report
-
+          path: capday_1/allure-report
           if-no-files-found: warn
-
           retention-days: 14
 
       - name: Deploy to GitHub Pages
-
         if: always() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
-
         uses: peaceiris/actions-gh-pages@v3
-
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
           publish_branch: gh-pages
-
-          publish_dir: allure-report
-
+          publish_dir: capday_1/allure-report
         continue-on-error: true
