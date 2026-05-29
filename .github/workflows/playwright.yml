@@ -5,7 +5,7 @@ on:
     branches:
       - "**"
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
 
 permissions:
@@ -26,7 +26,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: project1-pom
+        working-directory: capday_3
 
     steps:
       - name: Checkout Repository
@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: project1-pom/package-lock.json
+          cache-dependency-path: capday_2/package-lock.json
 
       - name: Install Dependencies
         run: npm install
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-shard-${{ matrix.shard_index }}
-          path: project1-pom/allure-results
+          path: capday_2/allure-results
           if-no-files-found: warn
           retention-days: 14
 
@@ -66,7 +66,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: project1-pom
+        working-directory: capday_3
 
     steps:
       - name: Checkout Repository
@@ -83,7 +83,7 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: project1-pom/package-lock.json
+          cache-dependency-path: capday_2/package-lock.json
 
       - name: Install Dependencies
         run: npm install
@@ -93,7 +93,24 @@ jobs:
         with:
           pattern: allure-results-shard-*
           merge-multiple: true
-          path: project1-pom/allure-results
+          path: capday_3/allure-results
+
+      - name: Get Allure History
+        uses: actions/checkout@v4
+        if: always()
+        with:
+          ref: gh-pages
+          path: capday_3/gh-pages-dir
+        continue-on-error: true
+
+      - name: Copy History to Allure Results
+        if: always()
+        run: |
+          if [ -d gh-pages-dir/history ]; then
+            mkdir -p allure-results/history
+            cp -r gh-pages-dir/history/* allure-results/history/
+          fi
+        continue-on-error: true
 
       - name: Generate Allure Report
         run: npm run allure:generate
@@ -104,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: project1-pom/allure-report
+          path: capday_3/allure-report
           if-no-files-found: warn
           retention-days: 14
 
@@ -114,5 +131,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: project1-pom/allure-report
+          publish_dir: capday_3/allure-report
         continue-on-error: true
