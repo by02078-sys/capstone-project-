@@ -26,7 +26,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: capday_4
+        working-directory: capday_5
 
     steps:
       - name: Checkout Repository
@@ -37,7 +37,7 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: capday_4/package-lock.json
+          cache-dependency-path: capday_5/package-lock.json
 
       - name: Install Dependencies
         run: npm install
@@ -54,7 +54,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-results-shard-${{ matrix.shard_index }}
-          path: capday_4/allure-results
+          path: capday_5/allure-results
           if-no-files-found: warn
           retention-days: 14
 
@@ -66,7 +66,7 @@ jobs:
 
     defaults:
       run:
-        working-directory: capday_4
+        working-directory: capday_5
 
     steps:
       - name: Checkout Repository
@@ -83,7 +83,7 @@ jobs:
         with:
           node-version: lts/*
           cache: npm
-          cache-dependency-path: capday_4/package-lock.json
+          cache-dependency-path: capday_5/package-lock.json
 
       - name: Install Dependencies
         run: npm install
@@ -93,14 +93,14 @@ jobs:
         with:
           pattern: allure-results-shard-*
           merge-multiple: true
-          path: capday_4/allure-results
+          path: capday_5/allure-results
 
       - name: Get Allure History
         uses: actions/checkout@v4
         if: always()
         with:
           ref: gh-pages
-          path: capday_4/gh-pages-dir
+          path: capday_5/gh-pages-dir
         continue-on-error: true
 
       - name: Copy History to Allure Results
@@ -121,7 +121,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: allure-report
-          path: capday_4/allure-report
+          path: capday_5/allure-report
           if-no-files-found: warn
           retention-days: 14
 
@@ -131,5 +131,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: capday_4/allure-report
+          publish_dir: capday_5/allure-report
         continue-on-error: true
