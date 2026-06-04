@@ -6,8 +6,9 @@
   "main": "index.js",
   "scripts": {
     "test": "playwright test",
-    "allure:generate": "allure generate allure-results --clean -o allure-report",
-    "allure:open": "allure open allure-report",
+    "test:ci": "npx playwright test --project=chromium",
+    "allure:generate": "npx allure generate allure-results --clean -o allure-report",
+    "allure:open": "npx allure open allure-report",
     "allure:clear": "rm -rf allure-results allure-report playwright-report",
     "start": "node server.js"
   },
@@ -21,6 +22,6 @@
     "express": "^5.2.1"
   },
   "devDependencies": {
-    "allure-commandline": "^2.42.0"
+    "allure-commandline": "^3.9.0"
   }
 }
