@@ -4,14 +4,19 @@ on:
     branches:
       - "**"
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
   workflow_dispatch:
- 
+
+# Opt into Node 24 at the workflow level to clear deprecation warnings
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+  CI: true
+
 permissions:
   contents: write
   pages: write
   id-token: write
- 
+
 jobs:
   test:
     timeout-minutes: 60
@@ -20,84 +25,83 @@ jobs:
       fail-fast: false
       matrix:
         shard_index: [1, 2, 3]
-    env:
-      CI: true
- 
+
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
- 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-        cache: npm
- 
-    - name: Install Dependencies
-      run: npm ci
- 
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
- 
-    - name: Run Playwright Tests
-      run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
-      continue-on-error: true
- 
-    - name: Upload Allure Raw Results (Shard)
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-results-shard-${{ matrix.shard_index }}
-        path: allure-results
-        if-no-files-found: warn
-        retention-days: 14
- 
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2 # Explicit point release for Node 24 stability
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: "24" # Explicitly use Node 24 to match the runner's future default
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright Tests
+        run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
+        continue-on-error: true
+
+      - name: Upload Allure Raw Results (Shard)
+        if: always()
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: allure-results-shard-${{ matrix.shard_index }}
+          path: allure-results/
+          if-no-files-found: warn
+          retention-days: 14
+
   report:
-    if: ${{ always() }}
+    if: always()
     needs: [test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
- 
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: lts/*
-        cache: npm
- 
-    - name: Install Dependencies
-      run: npm ci
- 
-    - name: Download Allure Raw Results
-      uses: actions/download-artifact@v4
-      with:
-        pattern: allure-results-shard-*
-        merge-multiple: true
-        path: allure-results
- 
-    - name: Ensure Allure Results Directory
-      run: mkdir -p allure-results
- 
-    - name: Generate Allure Report
-      run: npm run allure:generate
-      continue-on-error: true
- 
-    - name: Upload Allure HTML Report
-      if: always()
-      uses: actions/upload-artifact@v4
-      with:
-        name: allure-report
-        path: allure-report
-        if-no-files-found: warn
-        retention-days: 14
- 
-    - name: Deploy to GitHub Pages
-      if: always() && github.event_name == 'push' && (github.ref_name == 'main' || github.ref_name == 'master')
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_branch: gh-pages
-        publish_dir: allure-report
-      continue-on-error: true
+      - name: Checkout Repository
+        uses: actions/checkout@v4.2.2
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4.1.0
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Download Allure Raw Results
+        uses: actions/download-artifact@v4.1.8
+        with:
+          pattern: allure-results-shard-*
+          merge-multiple: true
+          path: allure-results
+
+      - name: Ensure Allure Results Directory
+        run: mkdir -p allure-results
+
+      - name: Generate Allure Report
+        run: npm run allure:generate
+        continue-on-error: true
+
+      - name: Upload Allure HTML Report
+        if: always()
+        uses: actions/upload-artifact@v4.4.3
+        with:
+          name: allure-report
+          path: allure-report/ # Trailing slash ensures directory context
+          if-no-files-found: error # Changed to error to catch failures early
+          retention-days: 14
+
+      - name: Deploy to GitHub Pages
+        # Updated to v4 to support Node 24 and resolve deprecation warns
+        if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+        uses: peaceiris/actions-gh-pages@v4.0.0
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: ./allure-report
+        continue-on-error: true
