@@ -34,7 +34,6 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          # Updated to reference the capstone project path
           cache-dependency-path: ./capstone/package-lock.json
 
       - name: Install Dependencies
@@ -49,6 +48,13 @@ jobs:
         working-directory: ./capstone
         run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
         continue-on-error: true
+
+      # DIAGNOSTIC CHECK 1: See if individual test runner container builds data
+      - name: Debug Generated Shard Results
+        working-directory: ./capstone
+        run: |
+          echo "=== Checking allure-results contents on Shard ${{ matrix.shard_index }} ==="
+          ls -la allure-results || echo "allure-results folder does not exist!"
 
       - name: Upload Allure Raw Results (Shard)
         if: always()
@@ -86,6 +92,12 @@ jobs:
           pattern: allure-results-shard-*
           merge-multiple: true
           path: ./capstone/allure-results
+
+      # DIAGNOSTIC CHECK 2: See if the combined files exist before building report
+      - name: Verify Downloaded Result Files
+        run: |
+          echo "=== Listing files in combined allure-results folder ==="
+          ls -la ./capstone/allure-results || echo "Directory missing!"
 
       - name: Ensure Allure Results Directory
         run: mkdir -p ./capstone/allure-results

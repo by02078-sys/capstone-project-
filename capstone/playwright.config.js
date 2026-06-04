@@ -9,7 +9,15 @@ export default defineConfig({
   reporter: [
     ['html', { outputFolder: 'playwright-report', open: 'never' }],
     // Ensure this path is exactly 'allure-results' relative to your config file
-    ['allure-playwright', { resultsDir: 'allure-results' }]
+
+    [
+      'allure-playwright',
+      {
+        resultsDir: 'allure-results',
+        detail: true,
+        suiteTitle: true
+      }
+    ]
   ],
   use: {
     baseURL: 'https://www.saucedemo.com',
