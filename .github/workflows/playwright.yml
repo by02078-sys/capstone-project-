@@ -25,10 +25,9 @@ jobs:
       matrix:
         shard_index: [1, 2, 3]
 
-    # FIX 1: Directs test execution steps to look inside the subfolder
     defaults:
       run:
-        working-directory: ./capday_6
+        working-directory: ./capday_6 # Commands start inside your project folder
 
     steps:
       - name: Checkout Repository
@@ -39,7 +38,8 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: ./capday_6/package-lock.json # FIX 2: Finds your lockfile for caching
+          # REMOVED subfolder prefix because working-directory handles it natively
+          cache-dependency-path: package-lock.json
 
       - name: Install Dependencies
         run: npm ci
@@ -56,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4.4.3
         with:
           name: allure-results-shard-${{ matrix.shard_index }}
-          path: ./capday_6/allure-results/ # FIX 3: Points to the subfolder's results directory
+          path: allure-results/ # Fixed path relative to working-directory
           if-no-files-found: warn
           retention-days: 14
 
@@ -66,7 +66,6 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
 
-    # FIX 4: Directs report processing steps to work inside the subfolder
     defaults:
       run:
         working-directory: ./capday_6
@@ -80,7 +79,7 @@ jobs:
         with:
           node-version: "24"
           cache: npm
-          cache-dependency-path: ./capday_6/package-lock.json # FIX 5: Finds lockfile for report job dependencies
+          cache-dependency-path: package-lock.json # Fixed path
 
       - name: Install Dependencies
         run: npm ci
@@ -90,7 +89,7 @@ jobs:
         with:
           pattern: allure-results-shard-*
           merge-multiple: true
-          path: ./capday_6/allure-results # FIX 6: Places downloaded shards directly back into subfolder
+          path: allure-results # Fixed path
 
       - name: Ensure Allure Results Directory
         run: mkdir -p allure-results
@@ -104,7 +103,7 @@ jobs:
         uses: actions/upload-artifact@v4.4.3
         with:
           name: allure-report
-          path: ./capday_6/allure-report/ # FIX 7: Grabs the built HTML files from the correct path
+          path: allure-report/ # Fixed path relative to working-directory
           if-no-files-found: error
           retention-days: 14
 
@@ -114,5 +113,5 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./capday_6/allure-report # FIX 8: References the correct subfolder deployment path
+          publish_dir: ./allure-report # Relative shortcut for Pages module deployment
         continue-on-error: true
