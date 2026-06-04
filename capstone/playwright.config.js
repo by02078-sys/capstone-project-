@@ -7,9 +7,9 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [
-    ['line'],
-    ['html', { open: 'never' }],
-    ['allure-playwright', { outputFolder: 'allure-results' }]
+    ['html', { outputFolder: 'playwright-report', open: 'never' }],
+    // Ensure this path is exactly 'allure-results' relative to your config file
+    ['allure-playwright', { resultsDir: 'allure-results' }]
   ],
   use: {
     baseURL: 'https://www.saucedemo.com',

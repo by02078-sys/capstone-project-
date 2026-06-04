@@ -1,26 +1,27 @@
 {
-  "name": "renderplaywright",
+  "name": "capstone",
   "version": "1.0.0",
-  "type": "module",
-  "description": "",
+  "description": "Playwright Automation Capstone Project Suite",
   "main": "index.js",
   "scripts": {
-    "test": "playwright test",
-    "allure:generate": "allure generate allure-results --clean -o allure-report",
-    "allure:open": "allure open allure-report",
-    "allure:clear": "rm -rf allure-results allure-report playwright-report",
-    "start": "node server.js"
+    "test:ci": "npx playwright test tests/allSuites.spec.js --project=chromium",
+    "allure:clear": "npx allure edit allure-results --clean",
+    "allure:generate": "npx allure generate allure-results --clean -o allure-report"
   },
-  "keywords": [],
+  "keywords": [
+    "playwright",
+    "allure",
+    "testing",
+    "automation",
+    "ci-cd"
+  ],
   "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@playwright/test": "^1.60.0",
-    "allure-playwright": "^3.9.0",
-    "dotenv": "^17.4.2",
-    "express": "^5.2.1"
-  },
   "devDependencies": {
-    "allure-commandline": "^2.42.0"
+    "@playwright/test": "^1.60.0",
+    "@types/node": "^25.9.1",
+    "allure": "^3.9.0",
+    "allure-commandline": "^3.9.0",
+    "allure-playwright": "^3.9.0"
   }
 }
