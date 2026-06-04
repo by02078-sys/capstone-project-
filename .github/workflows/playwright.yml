@@ -85,27 +85,21 @@ jobs:
         with:
           pattern: allure-results-shard-*
           merge-multiple: true
-          # Downloads artifacts directly to the absolute repository workspace root context
           path: ./capstone/allure-results
 
-      # DEBUG STEP: This lists files so you can verify exactly where things are written if it fails
-      - name: Verify Result Structure
-        run: |
-          echo "=== Checking Capstone Directory ==="
-          ls -la ./capstone
-          echo "=== Checking Raw Shard Results ==="
-          ls -la ./capstone/allure-results || echo "No results directory found"
+      - name: Ensure Allure Results Directory
+        run: mkdir -p ./capstone/allure-results
 
       - name: Generate Allure Report
         working-directory: ./capstone
-        run: npx allure generate allure-results --clean -o allure-report
+        run: npm run allure:generate
+        continue-on-error: true
 
       - name: Upload Allure HTML Report
         if: always()
         uses: actions/upload-artifact@v4.4.3
         with:
           name: allure-report
-          # Root-relative tracking target pointing straight into your subfolder execution build
           path: ./capstone/allure-report/
           if-no-files-found: error
           retention-days: 14
