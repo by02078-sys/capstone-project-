@@ -7,7 +7,6 @@ on:
     branches: [main, master]
   workflow_dispatch:
 
-# Opt into Node 24 at the workflow level to clear deprecation warnings
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   CI: true
@@ -26,15 +25,21 @@ jobs:
       matrix:
         shard_index: [1, 2, 3]
 
+    # FIX 1: Directs test execution steps to look inside the subfolder
+    defaults:
+      run:
+        working-directory: ./capday_6
+
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4.2.2 # Explicit point release for Node 24 stability
+        uses: actions/checkout@v4.2.2
 
       - name: Setup Node.js
         uses: actions/setup-node@v4.1.0
         with:
-          node-version: "24" # Explicitly use Node 24 to match the runner's future default
+          node-version: "24"
           cache: npm
+          cache-dependency-path: ./capday_6/package-lock.json # FIX 2: Finds your lockfile for caching
 
       - name: Install Dependencies
         run: npm ci
@@ -51,7 +56,7 @@ jobs:
         uses: actions/upload-artifact@v4.4.3
         with:
           name: allure-results-shard-${{ matrix.shard_index }}
-          path: allure-results/
+          path: ./capday_6/allure-results/ # FIX 3: Points to the subfolder's results directory
           if-no-files-found: warn
           retention-days: 14
 
@@ -60,6 +65,12 @@ jobs:
     needs: [test]
     timeout-minutes: 30
     runs-on: ubuntu-latest
+
+    # FIX 4: Directs report processing steps to work inside the subfolder
+    defaults:
+      run:
+        working-directory: ./capday_6
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4.2.2
@@ -69,6 +80,7 @@ jobs:
         with:
           node-version: "24"
           cache: npm
+          cache-dependency-path: ./capday_6/package-lock.json # FIX 5: Finds lockfile for report job dependencies
 
       - name: Install Dependencies
         run: npm ci
@@ -78,7 +90,7 @@ jobs:
         with:
           pattern: allure-results-shard-*
           merge-multiple: true
-          path: allure-results
+          path: ./capday_6/allure-results # FIX 6: Places downloaded shards directly back into subfolder
 
       - name: Ensure Allure Results Directory
         run: mkdir -p allure-results
@@ -92,16 +104,15 @@ jobs:
         uses: actions/upload-artifact@v4.4.3
         with:
           name: allure-report
-          path: allure-report/ # Trailing slash ensures directory context
-          if-no-files-found: error # Changed to error to catch failures early
+          path: ./capday_6/allure-report/ # FIX 7: Grabs the built HTML files from the correct path
+          if-no-files-found: error
           retention-days: 14
 
       - name: Deploy to GitHub Pages
-        # Updated to v4 to support Node 24 and resolve deprecation warns
         if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
         uses: peaceiris/actions-gh-pages@v4.0.0
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: ./allure-report
+          publish_dir: ./capday_6/allure-report # FIX 8: References the correct subfolder deployment path
         continue-on-error: true
