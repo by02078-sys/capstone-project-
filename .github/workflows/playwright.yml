@@ -1,114 +1,109 @@
-name: Playwright Tests & Allure Report
+name: Playwright Tests CI/CD
+
 on:
   push:
-    branches:
-      - "**"
+    branches: [main, master]
   pull_request:
     branches: [main, master]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-  CI: true
-
 permissions:
   contents: write
-  pages: write
-  id-token: write
 
 jobs:
   test:
-    timeout-minutes: 60
+    name: Run Playwright Tests (Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }})
+    timeout-minutes: 20
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard_index: [1, 2, 3]
-
-    defaults:
-      run:
-        working-directory: ./capstone
-
+        shardIndex: [1, 2, 3]
+        shardTotal: [3]
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: ./capstone/package-lock.json
-      - name: Install Dependencies
-        run: npm ci
+          node-version: 18
+          cache: "npm"
 
-      - name: Install Playwright Browsers
+      - name: Install dependencies
+        run: npm ci || npm install
+
+      - name: Install Playwright browsers and system dependencies
         run: npx playwright install --with-deps
 
-      - name: Run Playwright Tests
-        run: npm run test:ci -- --shard=${{ matrix.shard_index }}/3
-        continue-on-error: true
+      - name: Run tests with sharding
+        run: npx playwright test --shard=${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
 
-      - name: Upload Allure Raw Results (Shard)
+      - name: Upload allure-results artifact
         if: always()
-        uses: actions/upload-artifact@v4.4.3
+        uses: actions/upload-artifact@v4
         with:
-          name: allure-results-shard-${{ matrix.shard_index }}
-          path: ./capstone/allure-results/
-          if-no-files-found: warn
-          retention-days: 14
+          name: allure-results-${{ matrix.shardIndex }}
+          path: allure-results/
+          retention-days: 2
 
-  report:
+  merge-and-deploy:
+    name: Merge Results & Deploy
+    needs: test
     if: always()
-    needs: [test]
-    timeout-minutes: 30
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: ./capstone
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4.2.2
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4.1.0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: ./capstone/package-lock.json
+          node-version: 18
+          cache: "npm"
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install dependencies
+        run: npm ci || npm install
 
-      - name: Download Allure Raw Results
-        uses: actions/download-artifact@v4.1.8
-        with:
-          pattern: allure-results-shard-*
-          merge-multiple: true
-          path: ./capstone/allure-results
-
-      - name: Ensure Allure Results Directory
+      - name: Create allure-results directory
         run: mkdir -p allure-results
 
+      - name: Download all allure-results artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: temp-results/
+          pattern: allure-results-*
+          merge-multiple: true
+
+      - name: Copy downloaded results to allure-results
+        run: |
+          if [ -d "temp-results" ]; then
+            cp -r temp-results/* allure-results/ || true
+          fi
+          ls -la allure-results/
+
       - name: Generate Allure Report
-        run: npm run allure:generate
-        continue-on-error: true
+        run: |
+          npm run allure:generate
 
-      - name: Upload Allure HTML Report
-        if: always()
-        uses: actions/upload-artifact@v4.4.3
-        with:
-          name: allure-report
-          path: ./capstone/allure-report/
-          retention-days: 14
+      - name: Prepare Deployment Directory
+        run: |
+          mkdir -p dist
+          cp server.js dist/
+          cp package.json dist/
+          cp package-lock.json dist/ || true
+          cp -r public dist/
+          cp -r allure-report dist/
 
-      - name: Deploy to GitHub Pages
-        if: always() && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-        uses: peaceiris/actions-gh-pages@v4.0.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: ./capday_6/allure-report # FIX 8: References the correct subfolder deployment path
-        continue-on-error: true
+      - name: Deploy to allure-report branch
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd dist
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Deploy Allure report and dashboard server"
+          git push --force https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:allure-report
